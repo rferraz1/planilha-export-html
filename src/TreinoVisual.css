@@ -1,0 +1,46 @@
+/* CONTEÚDO FINAL E CORRIGIDO DO TreinoVisual.css */
+body { background-color: #f0f2f5; margin: 0; }
+.container-treino { background-color: white; font-family: Arial, sans-serif; color: #333; box-sizing: border-box; width: 100%; max-width: 210mm; margin: 0 auto; padding: 10mm; }
+.cabecalho-treino-novo { display: flex; justify-content: space-between; align-items: flex-start; text-align: left; margin-bottom: 25px; }
+.cabecalho-texto { display: flex; flex-direction: column; }
+.cabecalho-texto h2 { margin: 0; font-size: 24px; text-align: left; font-weight: bold; }
+.cabecalho-texto .subtitulo-personal { margin: 0; font-size: 18px; color: #555; }
+.cabecalho-texto .nome-aluno { margin: 0; font-size: 16px; margin-top: 20px; }
+.cabecalho-logo { flex-shrink: 0; }
+
+/* --- A CORREÇÃO FINAL ESTÁ AQUI --- */
+.logo-img {
+  max-width: 200px;
+  height: auto;
+  margin-top: -60px; /* AUMENTADO: de -30px para -60px */
+}
+
+.grid-exercicios { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10mm; }
+.card-exercicio { text-align: center; position: relative; }
+.gif-exercicio { width: 100%; border: 1px solid #ccc; border-radius: 4px; background-color: #f7f7f7; aspect-ratio: 1 / 1; object-fit: cover; }
+.nome-exercicio { margin: 8px 0 0 0; font-size: 14px; }
+.serie-exercicio { margin: 5px 0 0 0; font-size: 12px; color: #555; }
+.numero-exercicio { position: absolute; top: 5px; left: 5px; background-color: white; border: 2px solid #333; border-radius: 50%; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; font-weight: bold; z-index: 10; }
+.rodape-treino-novo { margin-top: 25px; border-top: 1px solid #eee; padding-top: 15px; }
+.rodape-treino-novo h3 { margin: 0 0 10px 0; }
+.observacoes-texto { white-space: pre-wrap; font-size: 14px; min-height: 50px; }
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 20px; box-sizing: border-box; }
+.modal-content { background: white; padding: 20px; border-radius: 8px; max-height: 95vh; overflow-y: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+.close-button { background: transparent; border: none; font-size: 2rem; cursor: pointer; line-height: 1; padding: 0; color: #888; }
+.export-button { background-color: #007bff; color: white; padding: 12px 24px; font-size: 1rem; border: none; border-radius: 6px; cursor: pointer; }
+.export-button:hover { background-color: #0056b3; }
+.modal-actions { text-align: center; margin-bottom: 20px; }
+
+@media (max-width: 768px) {
+  .container-treino { padding: 15px; border: none; }
+  .grid-exercicios { grid-template-columns: repeat(2, 1fr); gap: 15px; }
+  .cabecalho-texto h2 { font-size: 20px; }
+  .cabecalho-texto .subtitulo-personal { font-size: 16px; }
+  
+  /* --- AJUSTE PROPORCIONAL PARA CELULAR --- */
+  .logo-img {
+    max-width: 140px;
+    margin-top: -40px; /* Aumentado proporcionalmente */
+  }
+}
