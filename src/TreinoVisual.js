@@ -1,97 +1,117 @@
-// src/TreinoVisual.js (VERSÃO FINAL SEM LOGO NO MODAL)
-import React, { useRef, useState } from 'react';
-import './TreinoVisual.css';
+import React from 'react';
+import './TreinoVisual.css'; // Importa os novos estilos para a pré-visualização
 
-const LOGO_FILENAME = 'Rodolfo_Logo.png'; 
+// Esta função agora gera um HTML com o design de alto nível
+const gerarConteudoHTML = (lista, alunoNome, observacoes) => {
+    const exerciciosHtml = lista.map(item => `
+        <div class="exercicio-card">
+            <img src="/gifs/${item.gif}" alt="${item.nome}" class="exercicio-gif" />
+            <div>
+                <p class="exercicio-nome">${item.nome}</p>
+                <p class="exercicio-series">3 séries de 10 repetições</p>
+            </div>
+            ${item.variacao ? `<p class="exercicio-variacao">${item.variacao}</p>` : ''}
+        </div>
+    `).join('');
 
-const TreinoVisual = ({ lista, alunoNome, observacoes, onClose, isModoVisualizacao, codificarDados }) => {
-    const treinoRef = useRef();
-    const [textoBotao, setTextoBotao] = useState('Exportar Planilha Animada');
+    const observacoesHtml = observacoes ? `
+        <div class="observacoes-box">
+            <strong>Observações:</strong>
+            <p>${observacoes.replace(/\n/g, '<br>')}</p>
+        </div>
+    ` : '';
+    
+    // O CSS embutido agora reflete o novo design do App.css
+    const estilosCSS = `
+        :root { --cor-verde: #28a745; --cor-fundo: #f4f7f6; --cor-branco: #ffffff; --cor-cinza-escuro: #333; --cor-cinza-medio: #6c757d; --cor-cinza-claro: #e9ecef; }
+        body { font-family: 'Poppins', sans-serif; margin: 0; padding: 2rem; background-color: var(--cor-fundo); color: var(--cor-cinza-escuro); }
+        .treino-folha { background: var(--cor-branco); max-width: 1000px; margin: 0 auto; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .header-container { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--cor-cinza-claro); padding-bottom: 1.5rem; margin-bottom: 1.5rem; }
+        .header-container .logo { max-width: 200px; }
+        .header-container h2 { font-size: 2.2em; font-weight: 700; margin: 0; }
+        .exercicios-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; }
+        .exercicio-card { background: var(--cor-fundo); border: 1px solid var(--cor-cinza-claro); border-radius: 8px; padding: 1rem; text-align: center; display: flex; flex-direction: column; justify-content: space-between; min-height: 280px; }
+        .exercicio-gif { width: 100%; border-radius: 6px; margin-bottom: 1rem; }
+        .exercicio-nome { font-weight: 600; font-size: 1rem; margin-bottom: 0.5rem; }
+        .exercicio-series { font-size: 0.9rem; color: var(--cor-cinza-medio); }
+        .exercicio-variacao { font-size: 0.9rem; font-weight: 500; color: var(--cor-verde); margin-top: 1rem; padding: 0.5rem; border-radius: 6px; background-color: #eaf6ec; word-wrap: break-word; }
+        .observacoes-box { margin-top: 2rem; border-top: 2px solid var(--cor-cinza-claro); padding-top: 1.5rem; text-align: left; }
+        .observacoes-box strong { font-size: 1.2rem; display: block; margin-bottom: 0.5rem; }
+        .observacoes-box p { font-size: 1rem; line-height: 1.6; white-space: pre-wrap; }
+    `;
 
-    const toBase64 = blob => new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(blob);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = error => reject(error);
-    });
+    return `
+        <!DOCTYPE html>
+        <html lang="pt-BR">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+            <title>Treino de ${alunoNome || 'Aluno(a)'}</title>
+            <style>${estilosCSS}</style>
+        </head>
+        <body>
+            <div class="treino-folha">
+                <div class="header-container">
+                    <h2>Treino de: ${alunoNome || "________________"}</h2>
+                    <img src="/Rodolfo_Logo.png" alt="Logo" class="logo" />
+                </div>
+                <div class="exercicios-grid">${exerciciosHtml}</div>
+                ${observacoesHtml}
+            </div>
+        </body>
+        </html>
+    `;
+};
 
-    const handleExportHTML = async () => {
-        setTextoBotao('Exportando...');
-        if (!treinoRef.current) { setTextoBotao('Exportar Planilha Animada'); return; }
-        try {
-            const clone = treinoRef.current.cloneNode(true);
-            const images = clone.querySelectorAll('img');
-            for (const img of images) {
-                const src = img.getAttribute('src');
-                try {
-                    const response = await fetch(src);
-                    const blob = await response.blob();
-                    img.src = await toBase64(blob);
-                } catch (error) { console.error('Falha ao embutir imagem:', src, error); }
-            }
-            const cssContent = Array.from(document.styleSheets).map(sheet => { try { return Array.from(sheet.cssRules).map(rule => rule.cssText).join(''); } catch (e) { return ''; }}).join('');
-            const htmlString = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Treino - ${alunoNome}</title><style>${cssContent}</style></head><body>${clone.outerHTML}</body></html>`;
-            const blob = new Blob([htmlString], { type: 'text/html' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `treino-${alunoNome.replace(/ /g, '_') || 'aluno'}.html`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            setTextoBotao('✅ Exportado!');
-            setTimeout(() => setTextoBotao('Exportar Planilha Animada'), 2500);
-        } catch (error) {
-            console.error("Erro ao gerar o HTML:", error);
-            alert("Ocorreu um erro ao gerar o arquivo.");
-            setTextoBotao('Exportar Planilha Animada');
-        }
+
+const TreinoVisual = ({ lista, alunoNome, observacoes, onClose }) => {
+    const exportarParaHTML = () => {
+        const conteudoHtml = gerarConteudoHTML(lista, alunoNome, observacoes);
+        const blob = new Blob([conteudoHtml], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `treino-${alunoNome || 'aluno'}.html`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     };
 
-    const conteudoTreino = (
-        <div ref={treinoRef} className="container-treino">
-            <header className="cabecalho-treino-novo">
-                <div className="cabecalho-texto">
-                  <h2>Rodolfo Ferraz</h2>
-                  <p className="subtitulo-personal">Personal Trainer</p>
-                  <p className="nome-aluno"><strong>Aluno(a):</strong> {alunoNome || '____________________'}</p>
-                </div>
-                <div className="cabecalho-logo">
-                    <img src={`/${LOGO_FILENAME}`} alt="Logo Personal Trainer" className="logo-img" />
-                </div>
-            </header>
-            <main className="grid-exercicios">
-                {(lista || []).map((ex, index) => (
-                    <div key={index} className="card-exercicio">
-                        <span className="numero-exercicio">{index + 1}</span>
-                        <img src={`/gifs/${ex.gif}`} alt={ex.nome} className="gif-exercicio" />
-                        <p className="nome-exercicio"><strong>{ex.nome}</strong></p>
-                        <p className="serie-exercicio">3x10 rep</p>
-                    </div>
-                ))}
-            </main>
-            <footer className="rodape-treino-novo">
-                <h3>Observações:</h3>
-                <p className="observacoes-texto">{observacoes || 'Nenhuma.'}</p>
-            </footer>
-        </div>
-    );
-
-    if (isModoVisualizacao) { return conteudoTreino; }
-
+    // A pré-visualização agora usa as novas classes do TreinoVisual.css
     return (
-        <div>
-            <div className="modal-header">
-                <h2>Pré-visualização do Treino</h2>
-                <button onClick={onClose} className="close-button">&times;</button>
+        <div className="treino-visual-container">
+            <div id="treino-para-exportar" className="treino-folha">
+                <div className="header-container">
+                    <h2>Treino de: {alunoNome || "________________"}</h2>
+                    <img src="/Rodolfo_Logo.png" alt="Logo" className="logo" />
+                </div>
+                <div className="exercicios-grid">
+                    {lista.map((item, index) => (
+                        <div key={index} className="exercicio-card">
+                            <img src={`/gifs/${item.gif}`} alt={item.nome} className="exercicio-gif" />
+                            <div>
+                                <p className="exercicio-nome">{item.nome}</p>
+                                <p className="exercicio-series">3 séries de 10 repetições</p>
+                            </div>
+                            {item.variacao && <p className="exercicio-variacao">{item.variacao}</p>}
+                        </div>
+                    ))}
+                </div>
+                {observacoes && (
+                    <div className="observacoes-box">
+                        <strong>Observações:</strong>
+                        <p>{observacoes}</p>
+                    </div>
+                )}
             </div>
-            {/* A MUDANÇA ESTÁ AQUI: A logo foi removida */}
-            <div className="modal-actions">
-                <button onClick={handleExportHTML} className="export-button">{textoBotao}</button>
+            <div className="botoes-acao">
+                <button onClick={exportarParaHTML} className="botao-exportar">Baixar como HTML</button>
+                <button onClick={onClose} className="botao-fechar">Fechar</button>
             </div>
-            {conteudoTreino}
         </div>
     );
 };
+
 export default TreinoVisual;
