@@ -2,10 +2,9 @@ import React from 'react';
 import './TreinoVisual.css';
 
 const gerarConteudoHTML = (lista, alunoNome, observacoes) => {
-    // AQUI ESTÁ A CORREÇÃO FINAL: Usamos URLs completas para tudo
+    // AQUI ESTÁ A CORREÇÃO FINAL: Usamos URLs completas para tudo no arquivo exportado
     const exerciciosHtml = lista.map(item => `
         <div class="exercicio-card">
-            {/* CORREÇÃO #1: URL completa para os GIFs */}
             <img src="https://chipper-churros-5621ed.netlify.app/gifs/${item.gif}" alt="${item.nome}" class="exercicio-gif" />
             <div>
                 <p class="exercicio-nome">${item.nome}</p>
@@ -54,7 +53,7 @@ const gerarConteudoHTML = (lista, alunoNome, observacoes) => {
             <div class="treino-folha">
                 <div class="header-container">
                     <h2>Treino de: ${alunoNome || "________________"}</h2>
-                    {/* CORREÇÃO #2: URL completa para o Logo */}
+                    {/* AQUI ESTÁ A CORREÇÃO FINAL */}
                     <img src="https://planilharod.netlify.app/Rodolfo_Logo.png" alt="Logo" class="logo" />
                 </div>
                 <div class="exercicios-grid">${exerciciosHtml}</div>
@@ -66,7 +65,7 @@ const gerarConteudoHTML = (lista, alunoNome, observacoes) => {
 };
 
 
-// A parte de baixo (o preview) continua igual, pois os caminhos relativos funcionam lá
+// A parte de baixo (o preview) continua igual, pois o caminho relativo /Rodolfo_Logo.png funciona lá
 const TreinoVisual = ({ lista, alunoNome, observacoes, onClose }) => {
     const exportarParaHTML = () => {
         const conteudoHtml = gerarConteudoHTML(lista, alunoNome, observacoes);
