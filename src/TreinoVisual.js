@@ -1,7 +1,9 @@
 import React from 'react';
 import './TreinoVisual.css';
 
+// Função que gera o HTML para ser baixado
 const gerarConteudoHTML = (lista, alunoNome, observacoes) => {
+    // CORREÇÃO: URLS COMPLETAS para GIFs e Logo no arquivo exportado
     const exerciciosHtml = lista.map(item => `
         <div class="exercicio-card">
             <img src="https://chipper-churros-5621ed.netlify.app/gifs/${item.gif}" alt="${item.nome}" class="exercicio-gif" />
@@ -63,6 +65,7 @@ const gerarConteudoHTML = (lista, alunoNome, observacoes) => {
 };
 
 
+// Componente React que mostra a pré-visualização na tela
 const TreinoVisual = ({ lista, alunoNome, observacoes, onClose }) => {
     const exportarParaHTML = () => {
         const conteudoHtml = gerarConteudoHTML(lista, alunoNome, observacoes);
@@ -82,11 +85,13 @@ const TreinoVisual = ({ lista, alunoNome, observacoes, onClose }) => {
             <div id="treino-para-exportar" className="treino-folha">
                 <div className="header-container">
                     <h2>Treino de: {alunoNome || "________________"}</h2>
-                    <img src="/Rodolfo_Logo.png" alt="Logo" className="logo" />
+                    {/* CORREÇÃO: URL COMPLETA para o logo na pré-visualização */}
+                    <img src="https://planilharod.netlify.app/Rodolfo_Logo.png" alt="Logo" className="logo" />
                 </div>
                 <div className="exercicios-grid">
                     {lista.map((item, index) => (
                         <div key={index} className="exercicio-card">
+                             {/* CORREÇÃO: URL COMPLETA para o GIF na pré-visualização */}
                             <img src={`https://chipper-churros-5621ed.netlify.app/gifs/${item.gif}`} alt={item.nome} className="exercicio-gif" />
                             <div>
                                 <p className="exercicio-nome">{item.nome}</p>
