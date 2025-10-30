@@ -1,11 +1,11 @@
 import React from 'react';
-import './TreinoVisual.css'; // Importa os novos estilos para a pré-visualização
+import './TreinoVisual.css';
 
-// Esta função agora gera um HTML com o design de alto nível
 const gerarConteudoHTML = (lista, alunoNome, observacoes) => {
     const exerciciosHtml = lista.map(item => `
         <div class="exercicio-card">
-            <img src="/gifs/${item.gif}" alt="${item.nome}" class="exercicio-gif" />
+            {/* CORREÇÃO #1 APLICADA AQUI */}
+            <img src="https://chipper-churros-5621ed.netlify.app/gifs/${item.gif}" alt="${item.nome}" class="exercicio-gif" />
             <div>
                 <p class="exercicio-nome">${item.nome}</p>
                 <p class="exercicio-series">3 séries de 10 repetições</p>
@@ -21,7 +21,6 @@ const gerarConteudoHTML = (lista, alunoNome, observacoes) => {
         </div>
     ` : '';
     
-    // O CSS embutido agora reflete o novo design do App.css
     const estilosCSS = `
         :root { --cor-verde: #28a745; --cor-fundo: #f4f7f6; --cor-branco: #ffffff; --cor-cinza-escuro: #333; --cor-cinza-medio: #6c757d; --cor-cinza-claro: #e9ecef; }
         body { font-family: 'Poppins', sans-serif; margin: 0; padding: 2rem; background-color: var(--cor-fundo); color: var(--cor-cinza-escuro); }
@@ -79,7 +78,6 @@ const TreinoVisual = ({ lista, alunoNome, observacoes, onClose }) => {
         URL.revokeObjectURL(url);
     };
 
-    // A pré-visualização agora usa as novas classes do TreinoVisual.css
     return (
         <div className="treino-visual-container">
             <div id="treino-para-exportar" className="treino-folha">
@@ -90,7 +88,8 @@ const TreinoVisual = ({ lista, alunoNome, observacoes, onClose }) => {
                 <div className="exercicios-grid">
                     {lista.map((item, index) => (
                         <div key={index} className="exercicio-card">
-                            <img src={`/gifs/${item.gif}`} alt={item.nome} className="exercicio-gif" />
+                            {/* CORREÇÃO #2 APLICADA AQUI */}
+                            <img src={`https://chipper-churros-5621ed.netlify.app/gifs/${item.gif}`} alt={item.nome} className="exercicio-gif" />
                             <div>
                                 <p className="exercicio-nome">{item.nome}</p>
                                 <p className="exercicio-series">3 séries de 10 repetições</p>
