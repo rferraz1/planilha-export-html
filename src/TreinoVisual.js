@@ -4,7 +4,6 @@ import './TreinoVisual.css';
 const gerarConteudoHTML = (lista, alunoNome, observacoes) => {
     const exerciciosHtml = lista.map(item => `
         <div class="exercicio-card">
-            {/* CORREÇÃO #1 APLICADA AQUI */}
             <img src="https://chipper-churros-5621ed.netlify.app/gifs/${item.gif}" alt="${item.nome}" class="exercicio-gif" />
             <div>
                 <p class="exercicio-nome">${item.nome}</p>
@@ -88,7 +87,6 @@ const TreinoVisual = ({ lista, alunoNome, observacoes, onClose }) => {
                 <div className="exercicios-grid">
                     {lista.map((item, index) => (
                         <div key={index} className="exercicio-card">
-                            {/* CORREÇÃO #2 APLICADA AQUI */}
                             <img src={`https://chipper-churros-5621ed.netlify.app/gifs/${item.gif}`} alt={item.nome} className="exercicio-gif" />
                             <div>
                                 <p className="exercicio-nome">{item.nome}</p>
