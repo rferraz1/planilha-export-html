@@ -8,7 +8,7 @@ const ListaDeGifs = React.memo(({ gifs, onAdicionar }) => {
     return (
         <div className="gif-grid">
             {gifs.slice(0, 50).map((gifPath, i) => (
-                <img key={i} src={`/gifs/${gifPath}`} alt={gifPath} className="gif-item" onClick={() => onAdicionar(gifPath)} />
+                <img key={i} src={`https://chipper-churros-5621ed.netlify.app//gifs/${gifPath}`} alt={gifPath} className="gif-item" onClick={() => onAdicionar(gifPath)} />
             ))}
         </div>
     );
