@@ -1,13 +1,26 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './TreinoVisual.css';
-import lzString from 'lz-string';
+// Não precisamos mais do lz-string aqui
+// import lzString from 'lz-string';
 
-// A função que gera o HTML para baixar (AGORA É SECUNDÁRIA E QUEBRADA, MAS VAMOS DEIXAR)
-// Nós sabemos que este HTML falha no iPhone, mas não há problema em mantê-lo
-const gerarConteudoHTML = (lista, alunoNome, observacoes) => {
-    const exerciciosHtml = lista.map(item => `
+// --- FUNÇÃO AUXILIAR PARA CONVERTER IMAGEM (BLOB) EM BASE64 ---
+const blobToBase64 = (blob) => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            resolve(reader.result);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+};
+
+// --- FUNÇÃO QUE GERA O HTML (PARA O DOWNLOAD QUEBRADO) ---
+// (Vamos manter, mas ela vai falhar e avisar o usuário, como já faz)
+const gerarConteudoHTML = (listaComBase64, alunoNome, observacoes, logoBase64) => {
+    const exerciciosHtml = listaComBase64.map(item => `
         <div class="exercicio-card">
-            <img src="https://chipper-churros-5621ed.netlify.app/gifs/${item.gif}" alt="${item.nome}" class="exercicio-gif" />
+            <img src="${item.gifBase64}" alt="${item.nome}" class="exercicio-gif" />
             <div>
                 <p class="exercicio-nome">${item.nome}</p>
                 <p class="exercicio-series">3 séries de 10 repetições</p>
@@ -55,7 +68,7 @@ const gerarConteudoHTML = (lista, alunoNome, observacoes) => {
             <div class="treino-folha">
                 <div class="header-container">
                     <h2>Treino de: ${alunoNome || "________________"}</h2>
-                    <img src="https://planilharod.netlify.app/Rodolfo_Logo.png" alt="Logo" class="logo" />
+                    <img src="${logoBase64}" alt="Logo" class="logo" />
                 </div>
                 <div class="exercicios-grid">${exerciciosHtml}</div>
                 ${observacoesHtml}
@@ -65,46 +78,117 @@ const gerarConteudoHTML = (lista, alunoNome, observacoes) => {
     `;
 };
 
-
-// O componente que aceita a prop `isReadOnly`
+// --- O COMPONENTE PRINCIPAL ---
 const TreinoVisual = ({ lista, alunoNome, observacoes, onClose, isReadOnly = false }) => {
     
-    // A função de "Download" que sabemos que está quebrada no iPhone
-    const exportarParaHTML = () => {
-        const conteudoHtml = gerarConteudoHTML(lista, alunoNome, observacoes);
-        const blob = new Blob([conteudoHtml], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `treino-${alunoNome || 'aluno'}.html`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+    const [estaBaixando, setEstaBaixando] = useState(false);
+    const [estaCompartilhando, setEstaCompartilhando] = useState(false); // Novo estado
+
+    // A função de "Download" (sabemos que falha por CORS)
+    const exportarParaHTML = async () => {
+        // ... (código de download falho, sem mudanças)
+        setEstaBaixando(true);
+        alert('Preparando o download...');
+        try {
+            const logoUrl = "https://planilharod.netlify.app/Rodolfo_Logo.png";
+            const logoResponse = await fetch(logoUrl);
+            const logoBlob = await logoResponse.blob();
+            const logoBase64 = await blobToBase64(logoBlob);
+            const listaComBase64 = await Promise.all(
+                lista.map(async (item) => {
+                    const gifUrl = `https://chipper-churros-5621ed.netlify.app/gifs/${item.gif}`;
+                    const gifResponse = await fetch(gifUrl); 
+                    const gifBlob = await gifResponse.blob();
+                    const gifBase64 = await blobToBase64(gifBlob);
+                    return { ...item, gifBase64: gifBase64 };
+                })
+            );
+            const conteudoHtml = gerarConteudoHTML(listaComBase64, alunoNome, observacoes, logoBase64);
+            const blob = new Blob([conteudoHtml], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `treino-${alunoNome || 'aluno'}.html`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error("Erro ao gerar o HTML com Base64 (CORS):", error);
+            alert("Falha ao gerar o download (Erro de CORS).\n\nUse a opção 'Compartilhar Treino (Link)'.");
+        } finally {
+            setEstaBaixando(false);
+        }
     };
 
-    // A função de "Link" que é a nossa solução 100% funcional
-    const copiarLinkDoTreino = () => {
-        const dadosDoTreino = {
-            aluno: alunoNome,
-            obs: observacoes,
-            lista: lista
-        };
-        const jsonDoTreino = JSON.stringify(dadosDoTreino);
-        const stringComprimida = lzString.compressToEncodedURIComponent(jsonDoTreino);
-        const urlDoTreino = `https://planilharod.netlify.app/?treino=${stringComprimida}`;
+    // --- A NOVA FUNÇÃO "COMPARTILHAR" (USANDO GIST) ---
+    const compartilharTreino = async () => {
+        setEstaCompartilhando(true);
+        const nome = alunoNome || 'Aluno(a)';
 
-        const mensagemParaCopiar = `Olá, ${alunoNome || 'Aluno(a)'}! 👋\n\nSegue o seu treino personalizado. Clique no link para visualizar:\n${urlDoTreino}`;
+        try {
+            // 1. Prepara os dados do treino
+            const dadosDoTreino = {
+                aluno: alunoNome,
+                obs: observacoes,
+                lista: lista
+            };
+            const jsonDoTreino = JSON.stringify(dadosDoTreino);
 
-        navigator.clipboard.writeText(mensagemParaCopiar).then(() => {
-            alert('Mensagem com o link do treino copiada para a área de transferência!');
-        }).catch(err => {
-            console.error('Falha ao copiar link: ', err);
-            alert('Erro ao copiar o link.');
-        });
+            // 2. Prepara o Gist anônimo
+            const gistPayload = {
+                description: `Treino de ${nome}`,
+                public: true, // (Anônimo, mas publicamente acessível pelo link)
+                files: {
+                    "treino.json": {
+                        "content": jsonDoTreino
+                    }
+                }
+            };
+
+            // 3. Envia para a API do Gist
+            const response = await fetch("https://api.github.com/gists", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(gistPayload)
+            });
+
+            if (!response.ok) {
+                throw new Error("Falha ao criar o Gist no GitHub");
+            }
+
+            const gistData = await response.json();
+            const gistId = gistData.id; // O NOVO ID CURTO!
+
+            // 4. Monta o link final (curto e limpo)
+            const urlDoTreino = `https://planilharod.netlify.app/?treino=gist:${gistId}`;
+            
+            const mensagemParaCopiar = `Olá, ${nome}! 👋\n\nSegue o seu treino personalizado. Clique no link para visualizar:\n${urlDoTreino}`;
+
+            // 5. Tenta compartilhar (Celular) ou copiar (PC)
+            if (navigator.share) {
+                await navigator.share({
+                    title: `Treino de ${nome}`,
+                    text: `Olá, ${nome}! 👋\n\nSegue o seu treino personalizado.`,
+                    url: urlDoTreino
+                });
+            } else {
+                navigator.clipboard.writeText(mensagemParaCopiar).then(() => {
+                    alert('Mensagem com o link do treino (curto) copiada! (Cole no seu app de mensagem).');
+                });
+            }
+
+        } catch (error) {
+            console.error('Erro ao compartilhar via Gist:', error);
+            alert("Ocorreu um erro ao gerar o link. Tente novamente.");
+        } finally {
+            setEstaCompartilhando(false);
+        }
     };
 
-    // A pré-visualização (com links 100% funcionais, pois é no próprio site)
+    // --- A PRÉ-VISUALIZAÇÃO (rápida, com links) ---
     return (
         <div className="treino-visual-container">
             <div id="treino-para-exportar" className="treino-folha">
@@ -132,12 +216,18 @@ const TreinoVisual = ({ lista, alunoNome, observacoes, onClose, isReadOnly = fal
                 )}
             </div>
 
-            {/* Os botões só aparecem se não for "Modo Leitura" */}
+            {/* BOTÕES DE AÇÃO ATUALIZADOS */}
             {!isReadOnly && (
                 <div className="botoes-acao">
-                    <button onClick={copiarLinkDoTreino} className="botao-primario">Copiar Link do Treino</button>
-                    <button onClick={exportarParaHTML} className="botao-exportar">Baixar como HTML</button>
-                    <button onClick={onClose} className="botao-fechar">Fechar</button>
+                    <button onClick={compartilharTreino} className="botao-primario" disabled={estaCompartilhando}>
+                        {estaCompartilhando ? "Gerando Link..." : "Compartilhar Treino (Link)"}
+                    </button>
+                    <button onClick={exportarParaHTML} className="botao-exportar" disabled={estaBaixando}>
+                        {estaBaixando ? "Preparando..." : "Baixar como HTML"}
+                    </button>
+                    <button onClick={onClose} className="botao-fechar" disabled={estaBaixando || estaCompartilhando}>
+                        Fechar
+                    </button>
                 </div>
             )}
         </div>

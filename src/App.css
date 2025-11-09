@@ -1,33 +1,194 @@
-/* --- ESTILOS PARA OS BOTÕES DE GRUPO MUSCULAR --- */
-
-.grupo-muscular-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 1rem;
-    margin-bottom: 1rem;
+/* --- CONFIGURAÇÕES GLOBAIS E VARIÁVEIS --- */
+:root {
+  --cor-verde: #28a745;
+  --cor-fundo: #f4f7f6;
+  --cor-branco: #ffffff;
+  --cor-cinza-escuro: #333;
+  --cor-cinza-medio: #6c757d;
+  --cor-cinza-claro: #e9ecef;
+  --cor-vermelho-perigo: #dc3545;
 }
 
-.botao-grupo {
-    background-color: #f4f7f6;
-    border: 1px solid #e9ecef;
-    color: #495057;
-    padding: 6px 12px;
-    border-radius: 20px; /* Pílulas arredondadas */
-    font-size: 0.85rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    text-transform: capitalize; /* Deixa a primeira letra maiúscula */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--cor-fundo);
+  color: var(--cor-cinza-escuro);
 }
 
-.botao-grupo:hover {
-    background-color: #e9ecef;
-    border-color: #ced4da;
+h2, h3 {
+  color: var(--cor-cinza-escuro);
+  font-weight: 700;
 }
 
-.botao-grupo:focus {
+/* --- LAYOUT PRINCIPAL --- */
+.app-container {
+  display: flex;
+  flex-wrap: wrap; /* Permite quebrar em telas menores */
+  padding: 2rem;
+  gap: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.coluna-esquerda {
+  flex: 1;
+  min-width: 320px; /* Largura mínima */
+  max-height: 90vh; /* Altura máxima */
+  overflow-y: auto; /* Scroll se o conteúdo estourar */
+  padding-right: 1.5rem;
+  border-right: 1px solid var(--cor-cinza-claro);
+}
+
+.coluna-direita {
+  flex: 1.5;
+  min-width: 400px; /* Largura mínima */
+  max-height: 90vh; /* Altura máxima */
+  overflow-y: auto; /* Scroll se o conteúdo estourar */
+}
+
+/* --- ESTILOS DE COMPONENTES GLOBAIS --- */
+.input-padrao {
+  width: 100%;
+  padding: 10px 15px;
+  font-size: 1rem;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  box-sizing: border-box; /* Garante que o padding não estoure a largura */
+  margin-bottom: 1rem;
+}
+
+.textarea-padrao {
+  width: 100%;
+  min-height: 80px;
+  padding: 10px 15px;
+  font-size: 1rem;
+  font-family: inherit;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  box-sizing: border-box;
+  resize: vertical;
+  margin-bottom: 1rem;
+}
+
+.botao-primario {
+  background-color: var(--cor-verde);
+  color: var(--cor-branco);
+  border: none;
+  padding: 10px 15px;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.botao-primario:hover {
+  background-color: #218838;
+}
+
+.botao-primario:disabled {
+  background-color: var(--cor-cinza-medio);
+  cursor: not-allowed;
+}
+
+/* --- COLUNA ESQUERDA (BIBLIOTECA) --- */
+.gif-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 10px;
+  margin-top: 1rem;
+}
+
+.gif-item {
+  width: 100%;
+  height: 100px;
+  object-fit: cover;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.gif-item:hover {
+  border-color: var(--cor-verde);
+}
+
+/* --- COLUNA DIREITA (MONTAR TREINO) --- */
+.aluno-container {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 1rem;
+}
+
+.aluno-container .input-padrao {
+  flex: 1;
+  margin-bottom: 0; /* Remove a margem de baixo no input */
+}
+
+.botao-salvar {
+  padding: 10px 15px;
+}
+
+label {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+/* Lista de Exercícios Adicionados */
+.lista-exercicios {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.card-exercicio {
+  background-color: var(--cor-branco);
+  border: 1px solid var(--cor-cinza-claro);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.card-exercicio-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--cor-cinza-claro);
+  padding-bottom: 0.5rem;
+}
+
+.input-nome-exercicio {
+  font-size: 1.1rem;
+  font-weight: 600;
+  border: none;
+  padding: 5px;
+  width: 90%;
+  border-radius: 4px;
+}
+
+.input-nome-exercicio:focus {
+    background-color: #f8f9fa;
     outline: none;
-    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.2); /* Sombra verde fraca */
-    border-color: #28a745;
+}
+
+.botao-deletar {
+  background: none;
+  border: none;
+  color: var(--cor-vermelho-perigo);
+  font-size: 1.5rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.textarea-variacao {
+  min-height: 40px;
+  font-size: 0.95rem;
+  margin-bottom: 0;
 }

@@ -3,9 +3,9 @@ import TreinoVisual from './TreinoVisual';
 import './Modal.css';
 import './App.css'; 
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import lzString from 'lz-string';
+import lzString from 'lz-string'; // Ainda precisamos dele para o fallback
 
-// Componente ListaDeGifs (sem mudanças)
+// Componente ListaDeGifs (com o link correto)
 const ListaDeGifs = React.memo(({ gifs, onAdicionar }) => {
     return (
         <div className="gif-grid">
@@ -18,7 +18,7 @@ const ListaDeGifs = React.memo(({ gifs, onAdicionar }) => {
 
 function App() {
     
-    // Lógica de leitura do link (sem mudanças)
+    // --- LÓGICA DE LEITURA DO LINK (ATUALIZADA PARA GIST) ---
     const [dadosDoLink, setDadosDoLink] = useState(null);
     const [carregandoLink, setCarregandoLink] = useState(true);
 
@@ -26,19 +26,53 @@ function App() {
         const params = new URLSearchParams(window.location.search);
         const treinoQuery = params.get('treino');
 
-        if (treinoQuery) {
+        // Função para buscar o Gist
+        const fetchGist = async (gistId) => {
             try {
-                const jsonDoTreino = lzString.decompressFromEncodedURIComponent(treinoQuery);
-                const dados = JSON.parse(jsonDoTreino);
+                const response = await fetch(`https://api.github.com/gists/${gistId}`);
+                if (!response.ok) throw new Error('Gist não encontrado');
+                
+                const gistData = await response.json();
+                
+                // Pega o conteúdo do arquivo 'treino.json' de dentro do Gist
+                const fileContent = gistData.files['treino.json'].content;
+                const dados = JSON.parse(fileContent);
+                
                 if (dados && dados.lista && dados.aluno !== undefined && dados.obs !== undefined) {
                     setDadosDoLink(dados);
                 }
             } catch (error) {
-                console.error("Erro ao decodificar treino:", error);
+                console.error("Erro ao buscar Gist:", error);
+                alert("Erro ao carregar o link do treino. O Gist pode ter sido removido.");
+            } finally {
+                setCarregandoLink(false); // Termina a verificação
             }
+        };
+
+        if (treinoQuery) {
+            // NOVO: Verifica se é um link Gist
+            if (treinoQuery.startsWith('gist:')) {
+                const gistId = treinoQuery.split(':')[1];
+                fetchGist(gistId);
+            
+            // PLANO B: Ainda sabe ler o link antigo (gigante)
+            } else {
+                try {
+                    const jsonDoTreino = lzString.decompressFromEncodedURIComponent(treinoQuery);
+                    const dados = JSON.parse(jsonDoTreino);
+                    if (dados && dados.lista && dados.aluno !== undefined && dados.obs !== undefined) {
+                        setDadosDoLink(dados);
+                    }
+                } catch (error) {
+                    console.error("Erro ao decodificar treino antigo:", error);
+                }
+                setCarregandoLink(false);
+            }
+        } else {
+            // Sem link, carrega o app normal
+            setCarregandoLink(false);
         }
-        setCarregandoLink(false);
-    }, []);
+    }, []); // O array vazio [] garante que isso só roda UMA VEZ
 
 
     // Hooks normais do app
@@ -50,9 +84,6 @@ function App() {
     const [observacoes, setObservacoes] = useState('');
     const [mostrarModal, setMostrarModal] = useState(false);
     
-    // NOVO ESTADO PARA AS PASTAS (PONTO 1)
-    const [gruposMusculares, setGruposMusculares] = useState([]);
-
     useEffect(() => {
         if (!carregandoLink && !dadosDoLink) {
             const alunosDoStorage = localStorage.getItem('alunos_personal');
@@ -60,36 +91,22 @@ function App() {
             
             fetch('/gifs.json').then(res => res.json()).then(data => {
                 setGifsPorExercicio(data);
-                
-                // NOVO: Extrai os grupos (chaves) do JSON
-                const grupos = Object.keys(data).sort(); // Ordena alfabeticamente
-                setGruposMusculares(grupos);
             });
         }
     }, [carregandoLink, dadosDoLink]);
 
     
-    // LÓGICA DE BUSCA MELHORADA (PONTO 2)
+    // LÓGICA DE BUSCA SIMPLES (COMO VOCÊ GOSTA)
     const gifsEncontrados = useMemo(() => {
         const buscaLimpa = busca.toLowerCase().trim();
-        
         if (!buscaLimpa) {
             return [];
         }
-
-        const todasChaves = Object.keys(gifsPorExercicio);
-        
-        const chavesEncontradas = todasChaves.filter(chave => 
-            chave.toLowerCase().startsWith(buscaLimpa)
-        );
-        
-        const todosGifs = chavesEncontradas.flatMap(chave => gifsPorExercicio[chave]);
-        
-        return todosGifs;
+        return gifsPorExercicio[buscaLimpa] || [];
     }, [busca, gifsPorExercicio]);
 
 
-    // Funções normais do app (sem mudanças)
+    // Funções normais do app (com todas as correções)
     const salvarAluno = () => {
         if (alunoNome && !alunosSalvos.includes(alunoNome)) {
             const novaLista = [...alunosSalvos, alunoNome];
@@ -118,9 +135,9 @@ function App() {
     };
 
 
-    // RENDERIZAÇÃO CONDICIONAL (sem mudanças)
+    // RENDERIZAÇÃO CONDICIONAL (para o aluno)
     if (carregandoLink) {
-        return <div className="app-container"><h1>Carregando...</h1></div>;
+        return <div className="app-container"><h1>A carregar...</h1></div>;
     }
 
     if (dadosDoLink) {
@@ -145,31 +162,24 @@ function App() {
         );
     }
 
-    // MODO NORMAL (com as novas pastas)
+    // MODO NORMAL (o seu app de criação)
     return (
         <div className="app-container">
-            {/* --- COLUNA DA ESQUERDA --- */}
+            {/* --- COLUNA DA ESQUERDA (SEM AS PASTAS) --- */}
             <div className="coluna-esquerda">
                 <h3>Biblioteca de Exercícios</h3>
-                <input type="text" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Digite para buscar..." className="input-padrao" />
-                
-                {/* NOVO: BOTÕES DE GRUPO MUSCULAR (PONTO 1) */}
-                <div className="grupo-muscular-container">
-                    {gruposMusculares.map(grupo => (
-                        <button 
-                            key={grupo} 
-                            className="botao-grupo"
-                            onClick={() => setBusca(grupo)} 
-                        >
-                            {grupo.charAt(0).toUpperCase() + grupo.slice(1)} 
-                        </button>
-                    ))}
-                </div>
+                <input 
+                    type="text" 
+                    value={busca} 
+                    onChange={(e) => setBusca(e.target.value)} 
+                    placeholder="Digite o grupo (ex: ombro)"
+                    className="input-padrao" 
+                />
                 
                 <ListaDeGifs gifs={gifsEncontrados} onAdicionar={adicionarExercicio} />
             </div>
 
-            {/* --- COLUNA DA DIREITA (sem mudanças) --- */}
+            {/* --- COLUNA DA DIREITA --- */}
             <div className="coluna-direita">
                 <h2>Montar Treino</h2>
                 <label htmlFor="aluno-nome">Nome do Aluno(a):</label>
@@ -203,7 +213,7 @@ function App() {
                                 {provided.placeholder}
                             </ul>
                         )}
-                    </Droppable> {/* <-- AQUI ESTÁ A CORREÇÃO */}
+                    </Droppable>
                 </DragDropContext>
                 
                 <button onClick={() => setMostrarModal(true)} disabled={lista.length === 0} className="botao-primario">
@@ -211,7 +221,7 @@ function App() {
                 </button>
             </div>
 
-            {/* O Modal que abre o TreinoVisual (sem mudanças) */}
+            {/* O Modal que abre o TreinoVisual */}
             {mostrarModal && (
                 <div className="modal-overlay">
                     <div className="modal-content">
