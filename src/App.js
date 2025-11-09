@@ -41,7 +41,7 @@ function App() {
     }, []);
 
 
-    // Hooks normais do app (sem mudanças)
+    // Hooks normais do app
     const [alunosSalvos, setAlunosSalvos] = useState([]);
     const [alunoNome, setAlunoNome] = useState('');
     const [busca, setBusca] = useState('');
@@ -49,17 +49,46 @@ function App() {
     const [lista, setLista] = useState([]);
     const [observacoes, setObservacoes] = useState('');
     const [mostrarModal, setMostrarModal] = useState(false);
+    
+    // NOVO ESTADO PARA AS PASTAS (PONTO 1)
+    const [gruposMusculares, setGruposMusculares] = useState([]);
 
     useEffect(() => {
         if (!carregandoLink && !dadosDoLink) {
             const alunosDoStorage = localStorage.getItem('alunos_personal');
             if (alunosDoStorage) setAlunosSalvos(JSON.parse(alunosDoStorage));
             
-            fetch('/gifs.json').then(res => res.json()).then(data => setGifsPorExercicio(data));
+            fetch('/gifs.json').then(res => res.json()).then(data => {
+                setGifsPorExercicio(data);
+                
+                // NOVO: Extrai os grupos (chaves) do JSON
+                const grupos = Object.keys(data).sort(); // Ordena alfabeticamente
+                setGruposMusculares(grupos);
+            });
         }
     }, [carregandoLink, dadosDoLink]);
 
     
+    // LÓGICA DE BUSCA MELHORADA (PONTO 2)
+    const gifsEncontrados = useMemo(() => {
+        const buscaLimpa = busca.toLowerCase().trim();
+        
+        if (!buscaLimpa) {
+            return [];
+        }
+
+        const todasChaves = Object.keys(gifsPorExercicio);
+        
+        const chavesEncontradas = todasChaves.filter(chave => 
+            chave.toLowerCase().startsWith(buscaLimpa)
+        );
+        
+        const todosGifs = chavesEncontradas.flatMap(chave => gifsPorExercicio[chave]);
+        
+        return todosGifs;
+    }, [busca, gifsPorExercicio]);
+
+
     // Funções normais do app (sem mudanças)
     const salvarAluno = () => {
         if (alunoNome && !alunosSalvos.includes(alunoNome)) {
@@ -69,7 +98,7 @@ function App() {
             alert(`Aluno "${alunoNome}" salvo!`);
         }
     };
-    const gifsEncontrados = useMemo(() => gifsPorExercicio[busca.toLowerCase()] || [], [busca, gifsPorExercicio]);
+    
     const adicionarExercicio = (gifPath) => {
         if (lista.length >= 9) { alert('Máximo de 9 exercícios.'); return; }
         const nomeDoExercicio = gifPath.split('/').pop().replace('.gif', '').replace(/_/g, ' ');
@@ -89,20 +118,17 @@ function App() {
     };
 
 
-    // --- RENDERIZAÇÃO CONDICIONAL (AGORA COM AS CORREÇÕES) ---
+    // RENDERIZAÇÃO CONDICIONAL (sem mudanças)
     if (carregandoLink) {
         return <div className="app-container"><h1>Carregando...</h1></div>;
     }
 
     if (dadosDoLink) {
-        // MODO LEITURA: (COM CORREÇÃO DE RESPONSIVIDADE E BOTÕES)
         return (
-            // 1. Fundo cinza com padding para o celular
             <div style={{backgroundColor: '#f4f7f6', padding: '0.5rem', minHeight: '100vh'}}> 
-                {/* 2. Conteúdo centralizado e responsivo */}
                 <div style={{
                     maxWidth: '1000px', 
-                    margin: '0.5rem auto', // Margem para celular
+                    margin: '0.5rem auto', 
                     background: 'none', 
                     boxShadow: 'none', 
                     padding: '0'
@@ -112,24 +138,38 @@ function App() {
                         alunoNome={dadosDoLink.aluno} 
                         observacoes={dadosDoLink.obs} 
                         onClose={() => {}}
-                        isReadOnly={true}  // <-- 3. ESCONDE OS BOTÕES PARA O ALUNO
+                        isReadOnly={true}
                     />
                 </div>
             </div>
         );
     }
 
-    // MODO NORMAL (sem mudanças)
+    // MODO NORMAL (com as novas pastas)
     return (
         <div className="app-container">
             {/* --- COLUNA DA ESQUERDA --- */}
             <div className="coluna-esquerda">
                 <h3>Biblioteca de Exercícios</h3>
                 <input type="text" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Digite para buscar..." className="input-padrao" />
+                
+                {/* NOVO: BOTÕES DE GRUPO MUSCULAR (PONTO 1) */}
+                <div className="grupo-muscular-container">
+                    {gruposMusculares.map(grupo => (
+                        <button 
+                            key={grupo} 
+                            className="botao-grupo"
+                            onClick={() => setBusca(grupo)} 
+                        >
+                            {grupo.charAt(0).toUpperCase() + grupo.slice(1)} 
+                        </button>
+                    ))}
+                </div>
+                
                 <ListaDeGifs gifs={gifsEncontrados} onAdicionar={adicionarExercicio} />
             </div>
 
-            {/* --- COLUNA DA DIREITA --- */}
+            {/* --- COLUNA DA DIREITA (sem mudanças) --- */}
             <div className="coluna-direita">
                 <h2>Montar Treino</h2>
                 <label htmlFor="aluno-nome">Nome do Aluno(a):</label>
@@ -152,7 +192,7 @@ function App() {
                                         {(provided) => (
                                             <li ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className="card-exercicio">
                                                 <div className="card-exercicio-header">
-                                                    <input type="text" value={item.nome} onChange={(e) => handleInputChange(item.id, 'nome', e.target.Vvalue)} className="input-nome-exercicio" />
+                                                    <input type="text" value={item.nome} onChange={(e) => handleInputChange(item.id, 'nome', e.target.value)} className="input-nome-exercicio" />
                                                     <button onClick={() => deletarExercicio(item.id)} className="botao-deletar">&#10005;</button>
                                                 </div>
                                                 <textarea placeholder="Adicionar informação pontual (ex: 3x12, cadência 2-2)" value={item.variacao} onChange={(e) => handleInputChange(item.id, 'variacao', e.target.value)} className="textarea-padrao textarea-variacao" />
@@ -163,7 +203,7 @@ function App() {
                                 {provided.placeholder}
                             </ul>
                         )}
-                    </Droppable>
+                    </Droppable> {/* <-- AQUI ESTÁ A CORREÇÃO */}
                 </DragDropContext>
                 
                 <button onClick={() => setMostrarModal(true)} disabled={lista.length === 0} className="botao-primario">
@@ -180,7 +220,7 @@ function App() {
                             alunoNome={alunoNome} 
                             observacoes={observacoes} 
                             onClose={() => setMostrarModal(false)}
-                            isReadOnly={false} // No modo de criação, mostramos os botões
+                            isReadOnly={false}
                         />
                     </div>
                 </div>

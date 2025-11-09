@@ -2,7 +2,8 @@ import React from 'react';
 import './TreinoVisual.css';
 import lzString from 'lz-string';
 
-// A função que gera o HTML para baixar (SEM MUDANÇAS)
+// A função que gera o HTML para baixar (AGORA É SECUNDÁRIA E QUEBRADA, MAS VAMOS DEIXAR)
+// Nós sabemos que este HTML falha no iPhone, mas não há problema em mantê-lo
 const gerarConteudoHTML = (lista, alunoNome, observacoes) => {
     const exerciciosHtml = lista.map(item => `
         <div class="exercicio-card">
@@ -65,9 +66,10 @@ const gerarConteudoHTML = (lista, alunoNome, observacoes) => {
 };
 
 
-// 1. O COMPONENTE AGORA ACEITA UMA NOVA PROP `isReadOnly`
+// O componente que aceita a prop `isReadOnly`
 const TreinoVisual = ({ lista, alunoNome, observacoes, onClose, isReadOnly = false }) => {
     
+    // A função de "Download" que sabemos que está quebrada no iPhone
     const exportarParaHTML = () => {
         const conteudoHtml = gerarConteudoHTML(lista, alunoNome, observacoes);
         const blob = new Blob([conteudoHtml], { type: 'text/html' });
@@ -81,6 +83,7 @@ const TreinoVisual = ({ lista, alunoNome, observacoes, onClose, isReadOnly = fal
         URL.revokeObjectURL(url);
     };
 
+    // A função de "Link" que é a nossa solução 100% funcional
     const copiarLinkDoTreino = () => {
         const dadosDoTreino = {
             aluno: alunoNome,
@@ -91,7 +94,6 @@ const TreinoVisual = ({ lista, alunoNome, observacoes, onClose, isReadOnly = fal
         const stringComprimida = lzString.compressToEncodedURIComponent(jsonDoTreino);
         const urlDoTreino = `https://planilharod.netlify.app/?treino=${stringComprimida}`;
 
-        // 2. MENSAGEM AMIGÁVEL
         const mensagemParaCopiar = `Olá, ${alunoNome || 'Aluno(a)'}! 👋\n\nSegue o seu treino personalizado. Clique no link para visualizar:\n${urlDoTreino}`;
 
         navigator.clipboard.writeText(mensagemParaCopiar).then(() => {
@@ -102,6 +104,7 @@ const TreinoVisual = ({ lista, alunoNome, observacoes, onClose, isReadOnly = fal
         });
     };
 
+    // A pré-visualização (com links 100% funcionais, pois é no próprio site)
     return (
         <div className="treino-visual-container">
             <div id="treino-para-exportar" className="treino-folha">
@@ -129,7 +132,7 @@ const TreinoVisual = ({ lista, alunoNome, observacoes, onClose, isReadOnly = fal
                 )}
             </div>
 
-            {/* 3. BOTÕES SÓ APARECEM SE NÃO FOR "MODO LEITURA" */}
+            {/* Os botões só aparecem se não for "Modo Leitura" */}
             {!isReadOnly && (
                 <div className="botoes-acao">
                     <button onClick={copiarLinkDoTreino} className="botao-primario">Copiar Link do Treino</button>

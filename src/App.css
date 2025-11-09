@@ -1,185 +1,33 @@
-/* --- 1. CONFIGURAÇÕES GLOBAIS E VARIÁVEIS DE COR --- */
-:root {
-  --cor-verde: #28a745;
-  --cor-verde-hover: #218838;
-  --cor-fundo: #f4f7f6;
-  --cor-branco: #ffffff;
-  --cor-cinza-escuro: #333;
-  --cor-cinza-medio: #6c757d;
-  --cor-cinza-claro: #e9ecef;
-  --cor-vermelho: #dc3545;
-  --sombra-card: 0 4px 6px rgba(0, 0, 0, 0.1);
+/* --- ESTILOS PARA OS BOTÕES DE GRUPO MUSCULAR --- */
+
+.grupo-muscular-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
 }
 
-body {
-  margin: 0;
-  font-family: 'Poppins', sans-serif; /* Nova fonte profissional */
-  background-color: var(--cor-fundo);
-  color: var(--cor-cinza-escuro);
+.botao-grupo {
+    background-color: #f4f7f6;
+    border: 1px solid #e9ecef;
+    color: #495057;
+    padding: 6px 12px;
+    border-radius: 20px; /* Pílulas arredondadas */
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: capitalize; /* Deixa a primeira letra maiúscula */
 }
 
-/* --- 2. LAYOUT PRINCIPAL DE DUAS COLUNAS --- */
-.app-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2rem;
-  padding: 2rem;
-  max-width: 1400px;
-  margin: 0 auto;
+.botao-grupo:hover {
+    background-color: #e9ecef;
+    border-color: #ced4da;
 }
 
-.coluna-esquerda, .coluna-direita {
-  padding: 1.5rem;
-  background-color: var(--cor-branco);
-  border-radius: 12px;
-  box-shadow: var(--sombra-card);
-}
-
-.coluna-esquerda {
-  flex: 1;
-  min-width: 350px;
-}
-
-.coluna-direita {
-  flex: 2;
-  min-width: 450px;
-}
-
-/* --- 3. ESTILOS DOS COMPONENTES --- */
-
-/* Títulos */
-h2, h3 {
-  margin-top: 0;
-  color: var(--cor-cinza-escuro);
-}
-
-/* Inputs e Textareas */
-.input-padrao, .textarea-padrao {
-  width: 100%;
-  padding: 0.75rem;
-  font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  box-sizing: border-box;
-  margin-bottom: 1rem;
-  font-family: 'Poppins', sans-serif;
-}
-
-/* Botões */
-.botao-primario {
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
-  font-weight: 500;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  background-color: var(--cor-verde);
-  color: var(--cor-branco);
-  transition: background-color 0.2s;
-}
-
-.botao-primario:hover {
-  background-color: var(--cor-verde-hover);
-}
-.botao-primario:disabled {
-  background-color: var(--cor-cinza-medio);
-  cursor: not-allowed;
-}
-
-
-/* Coluna Esquerda: Busca e Gifs */
-.gif-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 1rem;
-  margin-top: 1.5rem;
-}
-
-.gif-item {
-  cursor: pointer;
-  border-radius: 8px;
-  transition: transform 0.2s, box-shadow 0.2s;
-  width: 100%;
-}
-
-.gif-item:hover {
-  transform: scale(1.05);
-  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
-}
-
-/* Coluna Direita: Dados do Aluno e Lista */
-.aluno-container {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.aluno-container input {
-  flex-grow: 1;
-}
-
-.botao-salvar {
-  padding: 0.75rem 1rem;
-  background-color: var(--cor-cinza-medio);
-}
-.botao-salvar:hover {
-  background-color: #5a6268;
-}
-
-/* Lista de Exercícios Adicionados */
-.lista-exercicios {
-  list-style: none;
-  padding: 0;
-  margin-top: 1rem;
-}
-
-.card-exercicio {
-  margin-bottom: 1rem;
-  padding: 1rem;
-  background: var(--cor-fundo);
-  border: 1px solid var(--cor-cinza-claro);
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  cursor: grab;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.card-exercicio-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-}
-
-.input-nome-exercicio {
-  font-weight: 600;
-  font-size: 1.1rem;
-  border: none;
-  background: transparent;
-  width: 90%;
-  padding: 0;
-}
-.input-nome-exercicio:focus {
-  outline: none;
-  background-color: #e8f0fe; /* Destaque sutil ao editar */
-}
-
-.botao-deletar {
-  background: none;
-  border: none;
-  color: var(--cor-vermelho);
-  cursor: pointer;
-  font-size: 1.5rem;
-  padding: 0 5px;
-}
-
-.textarea-variacao {
-  margin-top: 0.75rem;
-  width: 100%;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 0.5rem;
-  resize: vertical;
-  min-height: 40px;
+.botao-grupo:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.2); /* Sombra verde fraca */
+    border-color: #28a745;
 }
