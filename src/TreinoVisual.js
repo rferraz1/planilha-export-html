@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import './TreinoVisual.css';
-// Não precisamos mais do lz-string aqui
-// import lzString from 'lz-string';
+import lzString from 'lz-string'; // PRECISAMOS DO LZS DE VOLTA
 
 // --- FUNÇÃO AUXILIAR PARA CONVERTER IMAGEM (BLOB) EM BASE64 ---
+// (Sabemos que vai falhar por CORS, mas ela avisa o usuário)
 const blobToBase64 = (blob) => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -16,7 +16,6 @@ const blobToBase64 = (blob) => {
 };
 
 // --- FUNÇÃO QUE GERA O HTML (PARA O DOWNLOAD QUEBRADO) ---
-// (Vamos manter, mas ela vai falhar e avisar o usuário, como já faz)
 const gerarConteudoHTML = (listaComBase64, alunoNome, observacoes, logoBase64) => {
     const exerciciosHtml = listaComBase64.map(item => `
         <div class="exercicio-card">
@@ -82,27 +81,30 @@ const gerarConteudoHTML = (listaComBase64, alunoNome, observacoes, logoBase64) =
 const TreinoVisual = ({ lista, alunoNome, observacoes, onClose, isReadOnly = false }) => {
     
     const [estaBaixando, setEstaBaixando] = useState(false);
-    const [estaCompartilhando, setEstaCompartilhando] = useState(false); // Novo estado
-
-    // A função de "Download" (sabemos que falha por CORS)
+    // Não precisamos mais do "estaCompartilhando" da forma como o Gist precisava
+    
+    // A função de "Download" (que sabemos que falha por CORS)
     const exportarParaHTML = async () => {
-        // ... (código de download falho, sem mudanças)
         setEstaBaixando(true);
         alert('Preparando o download...');
+
         try {
             const logoUrl = "https://planilharod.netlify.app/Rodolfo_Logo.png";
             const logoResponse = await fetch(logoUrl);
             const logoBlob = await logoResponse.blob();
             const logoBase64 = await blobToBase64(logoBlob);
+
             const listaComBase64 = await Promise.all(
                 lista.map(async (item) => {
                     const gifUrl = `https://chipper-churros-5621ed.netlify.app/gifs/${item.gif}`;
                     const gifResponse = await fetch(gifUrl); 
                     const gifBlob = await gifResponse.blob();
                     const gifBase64 = await blobToBase64(gifBlob);
+                    
                     return { ...item, gifBase64: gifBase64 };
                 })
             );
+
             const conteudoHtml = gerarConteudoHTML(listaComBase64, alunoNome, observacoes, logoBase64);
             const blob = new Blob([conteudoHtml], { type: 'text/html' });
             const url = URL.createObjectURL(blob);
@@ -113,78 +115,46 @@ const TreinoVisual = ({ lista, alunoNome, observacoes, onClose, isReadOnly = fal
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
+
         } catch (error) {
             console.error("Erro ao gerar o HTML com Base64 (CORS):", error);
-            alert("Falha ao gerar o download (Erro de CORS).\n\nUse a opção 'Compartilhar Treino (Link)'.");
+            alert("Falha ao gerar o download (Erro de CORS).\n\nEste método não é compatível com os GIFs em outro site. Por favor, use a opção 'Compartilhar Treino (Link)', que é a solução 100% funcional.");
         } finally {
             setEstaBaixando(false);
         }
     };
 
-    // --- A NOVA FUNÇÃO "COMPARTILHAR" (USANDO GIST) ---
+    // --- A FUNÇÃO DE "COMPARTILHAR" (A SOLUÇÃO CORRETA E PROFISSIONAL) ---
     const compartilharTreino = async () => {
-        setEstaCompartilhando(true);
+        // Gera o link GIGANTE, como ontem
+        const dadosDoTreino = {
+            aluno: alunoNome,
+            obs: observacoes,
+            lista: lista
+        };
+        const jsonDoTreino = JSON.stringify(dadosDoTreino);
+        const stringComprimida = lzString.compressToEncodedURIComponent(jsonDoTreino);
+        const urlDoTreino = `https://planilharod.netlify.app/?treino=${stringComprimida}`;
         const nome = alunoNome || 'Aluno(a)';
 
-        try {
-            // 1. Prepara os dados do treino
-            const dadosDoTreino = {
-                aluno: alunoNome,
-                obs: observacoes,
-                lista: lista
-            };
-            const jsonDoTreino = JSON.stringify(dadosDoTreino);
-
-            // 2. Prepara o Gist anônimo
-            const gistPayload = {
-                description: `Treino de ${nome}`,
-                public: true, // (Anônimo, mas publicamente acessível pelo link)
-                files: {
-                    "treino.json": {
-                        "content": jsonDoTreino
-                    }
-                }
-            };
-
-            // 3. Envia para a API do Gist
-            const response = await fetch("https://api.github.com/gists", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(gistPayload)
-            });
-
-            if (!response.ok) {
-                throw new Error("Falha ao criar o Gist no GitHub");
-            }
-
-            const gistData = await response.json();
-            const gistId = gistData.id; // O NOVO ID CURTO!
-
-            // 4. Monta o link final (curto e limpo)
-            const urlDoTreino = `https://planilharod.netlify.app/?treino=gist:${gistId}`;
-            
-            const mensagemParaCopiar = `Olá, ${nome}! 👋\n\nSegue o seu treino personalizado. Clique no link para visualizar:\n${urlDoTreino}`;
-
-            // 5. Tenta compartilhar (Celular) ou copiar (PC)
-            if (navigator.share) {
+        if (navigator.share) { // Tenta o "Compartilhar" nativo (celular)
+            try {
                 await navigator.share({
                     title: `Treino de ${nome}`,
                     text: `Olá, ${nome}! 👋\n\nSegue o seu treino personalizado.`,
                     url: urlDoTreino
                 });
-            } else {
-                navigator.clipboard.writeText(mensagemParaCopiar).then(() => {
-                    alert('Mensagem com o link do treino (curto) copiada! (Cole no seu app de mensagem).');
-                });
+            } catch (error) {
+                console.error('Erro ao compartilhar:', error);
             }
-
-        } catch (error) {
-            console.error('Erro ao compartilhar via Gist:', error);
-            alert("Ocorreu um erro ao gerar o link. Tente novamente.");
-        } finally {
-            setEstaCompartilhando(false);
+        } else { // Plano B: Copiar para o clipboard (PC)
+            const mensagemParaCopiar = `Olá, ${nome}! 👋\n\nSegue o seu treino personalizado. Clique no link para visualizar:\n${urlDoTreino}`;
+            navigator.clipboard.writeText(mensagemParaCopiar).then(() => {
+                alert('Mensagem com o link do treino copiada! (Cole no seu app de mensagem).');
+            }).catch(err => {
+                console.error('Falha ao copiar link: ', err);
+                alert('Erro ao copiar o link.');
+            });
         }
     };
 
@@ -219,13 +189,13 @@ const TreinoVisual = ({ lista, alunoNome, observacoes, onClose, isReadOnly = fal
             {/* BOTÕES DE AÇÃO ATUALIZADOS */}
             {!isReadOnly && (
                 <div className="botoes-acao">
-                    <button onClick={compartilharTreino} className="botao-primario" disabled={estaCompartilhando}>
-                        {estaCompartilhando ? "Gerando Link..." : "Compartilhar Treino (Link)"}
+                    <button onClick={compartilharTreino} className="botao-primario">
+                        Compartilhar Treino (Link)
                     </button>
                     <button onClick={exportarParaHTML} className="botao-exportar" disabled={estaBaixando}>
                         {estaBaixando ? "Preparando..." : "Baixar como HTML"}
                     </button>
-                    <button onClick={onClose} className="botao-fechar" disabled={estaBaixando || estaCompartilhando}>
+                    <button onClick={onClose} className="botao-fechar" disabled={estaBaixando}>
                         Fechar
                     </button>
                 </div>
