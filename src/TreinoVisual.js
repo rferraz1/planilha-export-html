@@ -1,8 +1,8 @@
 import React from 'react';
 import './TreinoVisual.css';
-import lzString from 'lz-string'; // 1. IMPORTA A NOVA BIBLIOTECA
+import lzString from 'lz-string';
 
-// --- NENHUMA MUDANÇA NESTA FUNÇÃO ---
+// A função que gera o HTML para baixar (SEM MUDANÇAS)
 const gerarConteudoHTML = (lista, alunoNome, observacoes) => {
     const exerciciosHtml = lista.map(item => `
         <div class="exercicio-card">
@@ -65,9 +65,9 @@ const gerarConteudoHTML = (lista, alunoNome, observacoes) => {
 };
 
 
-const TreinoVisual = ({ lista, alunoNome, observacoes, onClose }) => {
+// 1. O COMPONENTE AGORA ACEITA UMA NOVA PROP `isReadOnly`
+const TreinoVisual = ({ lista, alunoNome, observacoes, onClose, isReadOnly = false }) => {
     
-    // --- FUNÇÃO ANTIGA (sem mudanças) ---
     const exportarParaHTML = () => {
         const conteudoHtml = gerarConteudoHTML(lista, alunoNome, observacoes);
         const blob = new Blob([conteudoHtml], { type: 'text/html' });
@@ -81,27 +81,21 @@ const TreinoVisual = ({ lista, alunoNome, observacoes, onClose }) => {
         URL.revokeObjectURL(url);
     };
 
-    // --- 2. NOVA FUNÇÃO PARA COPIAR O LINK ---
     const copiarLinkDoTreino = () => {
-        // Cria um objeto com todos os dados do treino
         const dadosDoTreino = {
             aluno: alunoNome,
             obs: observacoes,
             lista: lista
         };
-
-        // Transforma os dados em texto (JSON)
         const jsonDoTreino = JSON.stringify(dadosDoTreino);
-        
-        // Comprime o texto e o codifica para URL (é isso que gera o "N4Ig...")
         const stringComprimida = lzString.compressToEncodedURIComponent(jsonDoTreino);
-
-        // Monta o link final
         const urlDoTreino = `https://planilharod.netlify.app/?treino=${stringComprimida}`;
 
-        // Copia o link para a área de transferência do usuário
-        navigator.clipboard.writeText(urlDoTreino).then(() => {
-            alert('Link do treino copiado para a área de transferência!');
+        // 2. MENSAGEM AMIGÁVEL
+        const mensagemParaCopiar = `Olá, ${alunoNome || 'Aluno(a)'}! 👋\n\nSegue o seu treino personalizado. Clique no link para visualizar:\n${urlDoTreino}`;
+
+        navigator.clipboard.writeText(mensagemParaCopiar).then(() => {
+            alert('Mensagem com o link do treino copiada para a área de transferência!');
         }).catch(err => {
             console.error('Falha ao copiar link: ', err);
             alert('Erro ao copiar o link.');
@@ -110,7 +104,6 @@ const TreinoVisual = ({ lista, alunoNome, observacoes, onClose }) => {
 
     return (
         <div className="treino-visual-container">
-            {/* O conteúdo da pré-visualização não muda */}
             <div id="treino-para-exportar" className="treino-folha">
                 <div className="header-container">
                     <h2>Treino de: {alunoNome || "________________"}</h2>
@@ -135,17 +128,15 @@ const TreinoVisual = ({ lista, alunoNome, observacoes, onClose }) => {
                     </div>
                 )}
             </div>
-            
-            {/* --- 3. BOTÕES DE AÇÃO ATUALIZADOS --- */}
-            <div className="botoes-acao">
-                {/* O novo botão "Copiar Link" */}
-                <button onClick={copiarLinkDoTreino} className="botao-primario">Copiar Link do Treino</button>
-                
-                {/* O botão antigo (agora como secundário) */}
-                <button onClick={exportarParaHTML} className="botao-exportar">Baixar como HTML</button>
-                
-                <button onClick={onClose} className="botao-fechar">Fechar</button>
-            </div>
+
+            {/* 3. BOTÕES SÓ APARECEM SE NÃO FOR "MODO LEITURA" */}
+            {!isReadOnly && (
+                <div className="botoes-acao">
+                    <button onClick={copiarLinkDoTreino} className="botao-primario">Copiar Link do Treino</button>
+                    <button onClick={exportarParaHTML} className="botao-exportar">Baixar como HTML</button>
+                    <button onClick={onClose} className="botao-fechar">Fechar</button>
+                </div>
+            )}
         </div>
     );
 };
