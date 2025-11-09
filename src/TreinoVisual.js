@@ -1,9 +1,9 @@
 import React from 'react';
 import './TreinoVisual.css';
+import lzString from 'lz-string'; // 1. IMPORTA A NOVA BIBLIOTECA
 
-// Função que gera o HTML para ser baixado
+// --- NENHUMA MUDANÇA NESTA FUNÇÃO ---
 const gerarConteudoHTML = (lista, alunoNome, observacoes) => {
-    // CORREÇÃO: URLS COMPLETAS para GIFs e Logo no arquivo exportado
     const exerciciosHtml = lista.map(item => `
         <div class="exercicio-card">
             <img src="https://chipper-churros-5621ed.netlify.app/gifs/${item.gif}" alt="${item.nome}" class="exercicio-gif" />
@@ -65,8 +65,9 @@ const gerarConteudoHTML = (lista, alunoNome, observacoes) => {
 };
 
 
-// Componente React que mostra a pré-visualização na tela
 const TreinoVisual = ({ lista, alunoNome, observacoes, onClose }) => {
+    
+    // --- FUNÇÃO ANTIGA (sem mudanças) ---
     const exportarParaHTML = () => {
         const conteudoHtml = gerarConteudoHTML(lista, alunoNome, observacoes);
         const blob = new Blob([conteudoHtml], { type: 'text/html' });
@@ -80,18 +81,44 @@ const TreinoVisual = ({ lista, alunoNome, observacoes, onClose }) => {
         URL.revokeObjectURL(url);
     };
 
+    // --- 2. NOVA FUNÇÃO PARA COPIAR O LINK ---
+    const copiarLinkDoTreino = () => {
+        // Cria um objeto com todos os dados do treino
+        const dadosDoTreino = {
+            aluno: alunoNome,
+            obs: observacoes,
+            lista: lista
+        };
+
+        // Transforma os dados em texto (JSON)
+        const jsonDoTreino = JSON.stringify(dadosDoTreino);
+        
+        // Comprime o texto e o codifica para URL (é isso que gera o "N4Ig...")
+        const stringComprimida = lzString.compressToEncodedURIComponent(jsonDoTreino);
+
+        // Monta o link final
+        const urlDoTreino = `https://planilharod.netlify.app/?treino=${stringComprimida}`;
+
+        // Copia o link para a área de transferência do usuário
+        navigator.clipboard.writeText(urlDoTreino).then(() => {
+            alert('Link do treino copiado para a área de transferência!');
+        }).catch(err => {
+            console.error('Falha ao copiar link: ', err);
+            alert('Erro ao copiar o link.');
+        });
+    };
+
     return (
         <div className="treino-visual-container">
+            {/* O conteúdo da pré-visualização não muda */}
             <div id="treino-para-exportar" className="treino-folha">
                 <div className="header-container">
                     <h2>Treino de: {alunoNome || "________________"}</h2>
-                    {/* CORREÇÃO: URL COMPLETA para o logo na pré-visualização */}
                     <img src="https://planilharod.netlify.app/Rodolfo_Logo.png" alt="Logo" className="logo" />
                 </div>
                 <div className="exercicios-grid">
                     {lista.map((item, index) => (
                         <div key={index} className="exercicio-card">
-                             {/* CORREÇÃO: URL COMPLETA para o GIF na pré-visualização */}
                             <img src={`https://chipper-churros-5621ed.netlify.app/gifs/${item.gif}`} alt={item.nome} className="exercicio-gif" />
                             <div>
                                 <p className="exercicio-nome">{item.nome}</p>
@@ -108,8 +135,15 @@ const TreinoVisual = ({ lista, alunoNome, observacoes, onClose }) => {
                     </div>
                 )}
             </div>
+            
+            {/* --- 3. BOTÕES DE AÇÃO ATUALIZADOS --- */}
             <div className="botoes-acao">
+                {/* O novo botão "Copiar Link" */}
+                <button onClick={copiarLinkDoTreino} className="botao-primario">Copiar Link do Treino</button>
+                
+                {/* O botão antigo (agora como secundário) */}
                 <button onClick={exportarParaHTML} className="botao-exportar">Baixar como HTML</button>
+                
                 <button onClick={onClose} className="botao-fechar">Fechar</button>
             </div>
         </div>

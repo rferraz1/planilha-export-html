@@ -1,20 +1,50 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import TreinoVisual from './TreinoVisual';
 import './Modal.css';
-import './App.css'; // Importa o novo CSS
+import './App.css'; 
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import lzString from 'lz-string'; // 1. IMPORTA A BIBLIOTECA DE COMPRESSÃO
 
+// Componente ListaDeGifs (com o link do GIF corrigido)
 const ListaDeGifs = React.memo(({ gifs, onAdicionar }) => {
     return (
         <div className="gif-grid">
             {gifs.slice(0, 50).map((gifPath, i) => (
-                <img key={i} src={`https://chipper-churros-5621ed.netlify.app//gifs/${gifPath}`} alt={gifPath} className="gif-item" onClick={() => onAdicionar(gifPath)} />
+                <img key={i} src={`https://chipper-churros-5621ed.netlify.app/gifs/${gifPath}`} alt={gifPath} className="gif-item" onClick={() => onAdicionar(gifPath)} />
             ))}
         </div>
     );
 });
 
 function App() {
+    
+    // --- 2. LÓGICA DE LEITURA DO LINK ---
+    const [dadosDoLink, setDadosDoLink] = useState(null);
+    const [carregandoLink, setCarregandoLink] = useState(true);
+
+    useEffect(() => {
+        // Esta função roda uma vez para verificar o link
+        const params = new URLSearchParams(window.location.search);
+        const treinoQuery = params.get('treino');
+
+        if (treinoQuery) {
+            try {
+                // Se encontrar um link, decodifica e define os dados
+                const jsonDoTreino = lzString.decompressFromEncodedURIComponent(treinoQuery);
+                const dados = JSON.parse(jsonDoTreino);
+                if (dados && dados.lista && dados.aluno !== undefined && dados.obs !== undefined) {
+                    setDadosDoLink(dados);
+                }
+            } catch (error) {
+                console.error("Erro ao decodificar treino:", error);
+            }
+        }
+        setCarregandoLink(false); // Termina a verificação
+    }, []);
+    // --- FIM DA LÓGICA DE LEITURA ---
+
+
+    // Hooks normais do app
     const [alunosSalvos, setAlunosSalvos] = useState([]);
     const [alunoNome, setAlunoNome] = useState('');
     const [busca, setBusca] = useState('');
@@ -23,13 +53,18 @@ function App() {
     const [observacoes, setObservacoes] = useState('');
     const [mostrarModal, setMostrarModal] = useState(false);
 
+    // useEffect normal (agora só roda se não estivermos em "Modo Leitura")
     useEffect(() => {
-        const alunosDoStorage = localStorage.getItem('alunos_personal');
-        if (alunosDoStorage) setAlunosSalvos(JSON.parse(alunosDoStorage));
-        
-        fetch('/gifs.json').then(res => res.json()).then(data => setGifsPorExercicio(data));
-    }, []);
+        if (!carregandoLink && !dadosDoLink) {
+            const alunosDoStorage = localStorage.getItem('alunos_personal');
+            if (alunosDoStorage) setAlunosSalvos(JSON.parse(alunosDoStorage));
+            
+            fetch('/gifs.json').then(res => res.json()).then(data => setGifsPorExercicio(data));
+        }
+    }, [carregandoLink, dadosDoLink]); // Roda quando a verificação do link terminar
 
+    
+    // Funções normais do app (sem mudanças)
     const salvarAluno = () => {
         if (alunoNome && !alunosSalvos.includes(alunoNome)) {
             const novaLista = [...alunosSalvos, alunoNome];
@@ -38,9 +73,7 @@ function App() {
             alert(`Aluno "${alunoNome}" salvo!`);
         }
     };
-
     const gifsEncontrados = useMemo(() => gifsPorExercicio[busca.toLowerCase()] || [], [busca, gifsPorExercicio]);
-
     const adicionarExercicio = (gifPath) => {
         if (lista.length >= 9) { alert('Máximo de 9 exercícios.'); return; }
         const nomeDoExercicio = gifPath.split('/').pop().replace('.gif', '').replace(/_/g, ' ');
@@ -49,11 +82,8 @@ function App() {
             setLista([...lista, novoExercicio]);
         }
     };
-
     const deletarExercicio = (idParaDeletar) => setLista(lista.filter(item => item.id !== idParaDeletar));
-
     const handleInputChange = (id, campo, valor) => setLista(lista.map(item => item.id === id ? { ...item, [campo]: valor } : item));
-    
     const handleOnDragEnd = (result) => {
         if (!result.destination) return;
         const items = Array.from(lista);
@@ -61,7 +91,32 @@ function App() {
         items.splice(result.destination.index, 0, reorderedItem);
         setLista(items);
     };
+    // --- FIM DAS FUNÇÕES NORMAIS ---
 
+
+    // --- 3. RENDERIZAÇÃO CONDICIONAL ---
+    if (carregandoLink) {
+        return <div className="app-container"><h1>Carregando...</h1></div>; // Tela de carregamento
+    }
+
+    if (dadosDoLink) {
+        // MODO LEITURA: Se o link existe, mostra a planilha em tela cheia
+        // Usamos o CSS do modal para centralizar a planilha
+        return (
+            <div className="modal-overlay" style={{backgroundColor: '#f4f7f6'}}> {/* Fundo cinza */}
+                <div className="modal-content" style={{maxWidth: '1000px', background: 'none', boxShadow: 'none'}}>
+                    <TreinoVisual 
+                        lista={dadosDoLink.lista} 
+                        alunoNome={dadosDoLink.aluno} 
+                        observacoes={dadosDoLink.obs} 
+                        onClose={() => {}} // O botão "Fechar" não será usado aqui
+                    />
+                </div>
+            </div>
+        );
+    }
+
+    // MODO NORMAL: Se o link não existe, mostra o app de criação
     return (
         <div className="app-container">
             {/* --- COLUNA DA ESQUERDA --- */}
@@ -77,8 +132,8 @@ function App() {
                 <label htmlFor="aluno-nome">Nome do Aluno(a):</label>
                 <div className="aluno-container">
                     <input id="aluno-nome" type="text" value={alunoNome} onChange={(e) => setAlunoNome(e.target.value)} list="lista-alunos" className="input-padrao" placeholder="Digite ou selecione um aluno" />
-                    {/* --- CORREÇÃO APLICADA AQUI --- */}
                     <datalist id="lista-alunos">{alunosSalvos.map(nome => <option key={nome} value={nome} />)}</datalist>
+                    {/* AQUI ESTÁ A CORREÇÃO */}
                     <button onClick={salvarAluno} className="botao-primario botao-salvar">Salvar</button>
                 </div>
 
@@ -110,11 +165,11 @@ function App() {
                 </DragDropContext>
                 
                 <button onClick={() => setMostrarModal(true)} disabled={lista.length === 0} className="botao-primario">
-                    Visualizar e Baixar HTML
+                    Visualizar Treino
                 </button>
             </div>
 
-            {/* O Modal continua o mesmo */}
+            {/* O Modal que abre o TreinoVisual */}
             {mostrarModal && (
                 <div className="modal-overlay">
                     <div className="modal-content">
