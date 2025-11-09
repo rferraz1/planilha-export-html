@@ -3,7 +3,12 @@ import TreinoVisual from './TreinoVisual';
 import './Modal.css';
 import './App.css'; 
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import lzString from 'lz-string'; // Ainda precisamos dele para o fallback
+// lz-string não é mais necessário para o Gist, mas vamos manter caso queira o fallback
+import lzString from 'lz-string'; 
+
+// IMPORTA AS NOVAS FERRAMENTAS DO FIREBASE
+import { db } from './firebase';
+import { doc, getDoc } from "firebase/firestore";
 
 // Componente ListaDeGifs (com o link correto)
 const ListaDeGifs = React.memo(({ gifs, onAdicionar }) => {
@@ -18,55 +23,64 @@ const ListaDeGifs = React.memo(({ gifs, onAdicionar }) => {
 
 function App() {
     
-    // --- LÓGICA DE LEITURA DO LINK (ATUALIZADA PARA GIST) ---
+    // --- LÓGICA DE LEITURA DO LINK (ATUALIZADA PARA FIREBASE) ---
     const [dadosDoLink, setDadosDoLink] = useState(null);
     const [carregandoLink, setCarregandoLink] = useState(true);
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
-        const treinoQuery = params.get('treino');
+        const treinoId = params.get('treino'); // O ID curto: "a8Bcj"
 
-        // Função para buscar o Gist
-        const fetchGist = async (gistId) => {
+        // Função para buscar o Treino no Firebase
+        const fetchTreino = async (id) => {
             try {
-                const response = await fetch(`https://api.github.com/gists/${gistId}`);
-                if (!response.ok) throw new Error('Gist não encontrado');
-                
-                const gistData = await response.json();
-                
-                // Pega o conteúdo do arquivo 'treino.json' de dentro do Gist
-                const fileContent = gistData.files['treino.json'].content;
-                const dados = JSON.parse(fileContent);
-                
-                if (dados && dados.lista && dados.aluno !== undefined && dados.obs !== undefined) {
-                    setDadosDoLink(dados);
+                // Pega a referência do documento na coleção "treinos"
+                const docRef = doc(db, "treinos", id);
+                // Busca o documento
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    // Se o documento existe, pega os dados
+                    const dados = docSnap.data();
+                    // Converte o "criadoEm" de volta para um objeto Date
+                    dados.criadoEm = dados.criadoEm.toDate(); 
+                    
+                    if (dados && dados.lista && dados.aluno !== undefined && dados.obs !== undefined) {
+                        setDadosDoLink(dados);
+                    }
+                } else {
+                    console.error("Nenhum treino encontrado com esse ID.");
+                    alert("Link de treino inválido ou não encontrado.");
                 }
             } catch (error) {
-                console.error("Erro ao buscar Gist:", error);
-                alert("Erro ao carregar o link do treino. O Gist pode ter sido removido.");
+                console.error("Erro ao buscar treino no Firebase:", error);
+                alert("Erro ao carregar o link do treino.");
             } finally {
                 setCarregandoLink(false); // Termina a verificação
             }
         };
-
-        if (treinoQuery) {
-            // NOVO: Verifica se é um link Gist
-            if (treinoQuery.startsWith('gist:')) {
-                const gistId = treinoQuery.split(':')[1];
-                fetchGist(gistId);
-            
-            // PLANO B: Ainda sabe ler o link antigo (gigante)
-            } else {
-                try {
-                    const jsonDoTreino = lzString.decompressFromEncodedURIComponent(treinoQuery);
-                    const dados = JSON.parse(jsonDoTreino);
-                    if (dados && dados.lista && dados.aluno !== undefined && dados.obs !== undefined) {
-                        setDadosDoLink(dados);
-                    }
-                } catch (error) {
-                    console.error("Erro ao decodificar treino antigo:", error);
+        
+        // Verifica se o link é o "link gigante" antigo (fallback)
+        const fetchTreinoAntigo = (treinoQuery) => {
+             try {
+                const jsonDoTreino = lzString.decompressFromEncodedURIComponent(treinoQuery);
+                const dados = JSON.parse(jsonDoTreino);
+                if (dados && dados.lista && dados.aluno !== undefined && dados.obs !== undefined) {
+                    setDadosDoLink(dados);
                 }
-                setCarregandoLink(false);
+            } catch (error) {
+                console.error("Erro ao decodificar treino antigo:", error);
+            }
+            setCarregandoLink(false);
+        };
+
+
+        if (treinoId) {
+            // Se o link NÃO é o gigante, é o novo do Firebase
+            if (treinoId.length < 50) { // IDs do Firebase são curtos
+                fetchTreino(treinoId);
+            } else { // Senão, é o link gigante antigo
+                fetchTreinoAntigo(treinoId);
             }
         } else {
             // Sem link, carrega o app normal

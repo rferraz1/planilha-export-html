@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import './TreinoVisual.css';
-import lzString from 'lz-string'; // PRECISAMOS DO LZS DE VOLTA
+// Não precisamos mais do lz-string aqui
+// import lzString from 'lz-string';
 
-// --- FUNÇÃO AUXILIAR PARA CONVERTER IMAGEM (BLOB) EM BASE64 ---
-// (Sabemos que vai falhar por CORS, mas ela avisa o usuário)
+// IMPORTA AS FERRAMENTAS DO FIREBASE
+import { db } from './firebase'; // Nosso arquivo de conexão
+import { collection, addDoc } from "firebase/firestore"; 
+
+// --- FUNÇÃO AUXILIAR PARA O DOWNLOAD (QUE FALHA, MAS MANTEMOS) ---
 const blobToBase64 = (blob) => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -17,6 +21,7 @@ const blobToBase64 = (blob) => {
 
 // --- FUNÇÃO QUE GERA O HTML (PARA O DOWNLOAD QUEBRADO) ---
 const gerarConteudoHTML = (listaComBase64, alunoNome, observacoes, logoBase64) => {
+    // ... (Este código é o mesmo de antes, não precisamos mexer)
     const exerciciosHtml = listaComBase64.map(item => `
         <div class="exercicio-card">
             <img src="${item.gifBase64}" alt="${item.nome}" class="exercicio-gif" />
@@ -27,14 +32,12 @@ const gerarConteudoHTML = (listaComBase64, alunoNome, observacoes, logoBase64) =
             ${item.variacao ? `<p class="exercicio-variacao">${item.variacao}</p>` : ''}
         </div>
     `).join('');
-
     const observacoesHtml = observacoes ? `
         <div class="observacoes-box">
             <strong>Observações:</strong>
             <p>${observacoes.replace(/\n/g, '<br>')}</p>
         </div>
     ` : '';
-    
     const estilosCSS = `
         :root { --cor-verde: #28a745; --cor-fundo: #f4f7f6; --cor-branco: #ffffff; --cor-cinza-escuro: #333; --cor-cinza-medio: #6c757d; --cor-cinza-claro: #e9ecef; }
         body { font-family: 'Poppins', sans-serif; margin: 0; padding: 2rem; background-color: var(--cor-fundo); color: var(--cor-cinza-escuro); }
@@ -52,7 +55,6 @@ const gerarConteudoHTML = (listaComBase64, alunoNome, observacoes, logoBase64) =
         .observacoes-box strong { font-size: 1.2rem; display: block; margin-bottom: 0.5rem; }
         .observacoes-box p { font-size: 1rem; line-height: 1.6; white-space: pre-wrap; }
     `;
-
     return `
         <!DOCTYPE html>
         <html lang="pt-BR">
@@ -81,30 +83,27 @@ const gerarConteudoHTML = (listaComBase64, alunoNome, observacoes, logoBase64) =
 const TreinoVisual = ({ lista, alunoNome, observacoes, onClose, isReadOnly = false }) => {
     
     const [estaBaixando, setEstaBaixando] = useState(false);
-    // Não precisamos mais do "estaCompartilhando" da forma como o Gist precisava
-    
-    // A função de "Download" (que sabemos que falha por CORS)
+    const [estaCompartilhando, setEstaCompartilhando] = useState(false); // Novo estado
+
+    // A função de "Download" (sabemos que falha por CORS)
     const exportarParaHTML = async () => {
+        // ... (código de download falho, sem mudanças)
         setEstaBaixando(true);
         alert('Preparando o download...');
-
         try {
             const logoUrl = "https://planilharod.netlify.app/Rodolfo_Logo.png";
             const logoResponse = await fetch(logoUrl);
             const logoBlob = await logoResponse.blob();
             const logoBase64 = await blobToBase64(logoBlob);
-
             const listaComBase64 = await Promise.all(
                 lista.map(async (item) => {
                     const gifUrl = `https://chipper-churros-5621ed.netlify.app/gifs/${item.gif}`;
                     const gifResponse = await fetch(gifUrl); 
                     const gifBlob = await gifResponse.blob();
                     const gifBase64 = await blobToBase64(gifBlob);
-                    
                     return { ...item, gifBase64: gifBase64 };
                 })
             );
-
             const conteudoHtml = gerarConteudoHTML(listaComBase64, alunoNome, observacoes, logoBase64);
             const blob = new Blob([conteudoHtml], { type: 'text/html' });
             const url = URL.createObjectURL(blob);
@@ -115,46 +114,57 @@ const TreinoVisual = ({ lista, alunoNome, observacoes, onClose, isReadOnly = fal
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
-
         } catch (error) {
             console.error("Erro ao gerar o HTML com Base64 (CORS):", error);
-            alert("Falha ao gerar o download (Erro de CORS).\n\nEste método não é compatível com os GIFs em outro site. Por favor, use a opção 'Compartilhar Treino (Link)', que é a solução 100% funcional.");
+            alert("Falha ao gerar o download (Erro de CORS).\n\nUse a opção 'Compartilhar Treino (Link)'.");
         } finally {
             setEstaBaixando(false);
         }
     };
 
-    // --- A FUNÇÃO DE "COMPARTILHAR" (A SOLUÇÃO CORRETA E PROFISSIONAL) ---
+    // --- A NOVA FUNÇÃO "COMPARTILHAR" (USANDO FIREBASE) ---
     const compartilharTreino = async () => {
-        // Gera o link GIGANTE, como ontem
-        const dadosDoTreino = {
-            aluno: alunoNome,
-            obs: observacoes,
-            lista: lista
-        };
-        const jsonDoTreino = JSON.stringify(dadosDoTreino);
-        const stringComprimida = lzString.compressToEncodedURIComponent(jsonDoTreino);
-        const urlDoTreino = `https://planilharod.netlify.app/?treino=${stringComprimida}`;
+        setEstaCompartilhando(true);
         const nome = alunoNome || 'Aluno(a)';
 
-        if (navigator.share) { // Tenta o "Compartilhar" nativo (celular)
-            try {
+        try {
+            // 1. Prepara os dados do treino
+            const dadosDoTreino = {
+                aluno: alunoNome,
+                obs: observacoes,
+                lista: lista,
+                criadoEm: new Date() // Adiciona uma data de criação
+            };
+
+            // 2. Salva na "gaveta" (coleção "treinos") do Firestore
+            const docRef = await addDoc(collection(db, "treinos"), dadosDoTreino);
+            
+            // 3. Pega o ID curto que o Firebase acabou de criar
+            const treinoId = docRef.id; 
+
+            // 4. Monta o link final (curto e limpo)
+            const urlDoTreino = `https://planilharod.netlify.app/?treino=${treinoId}`;
+            
+            const mensagemParaCopiar = `Olá, ${nome}! 👋\n\nSegue o seu treino personalizado. Clique no link para visualizar:\n${urlDoTreino}`;
+
+            // 5. Tenta compartilhar (Celular) ou copiar (PC)
+            if (navigator.share) {
                 await navigator.share({
                     title: `Treino de ${nome}`,
                     text: `Olá, ${nome}! 👋\n\nSegue o seu treino personalizado.`,
                     url: urlDoTreino
                 });
-            } catch (error) {
-                console.error('Erro ao compartilhar:', error);
+            } else {
+                navigator.clipboard.writeText(mensagemParaCopiar).then(() => {
+                    alert('Mensagem com o link do treino copiada! (Cole no seu app de mensagem).');
+                });
             }
-        } else { // Plano B: Copiar para o clipboard (PC)
-            const mensagemParaCopiar = `Olá, ${nome}! 👋\n\nSegue o seu treino personalizado. Clique no link para visualizar:\n${urlDoTreino}`;
-            navigator.clipboard.writeText(mensagemParaCopiar).then(() => {
-                alert('Mensagem com o link do treino copiada! (Cole no seu app de mensagem).');
-            }).catch(err => {
-                console.error('Falha ao copiar link: ', err);
-                alert('Erro ao copiar o link.');
-            });
+
+        } catch (error) {
+            console.error('Erro ao salvar no Firebase:', error);
+            alert("Ocorreu um erro ao gerar o link. Tente novamente.");
+        } finally {
+            setEstaCompartilhando(false);
         }
     };
 
@@ -189,13 +199,13 @@ const TreinoVisual = ({ lista, alunoNome, observacoes, onClose, isReadOnly = fal
             {/* BOTÕES DE AÇÃO ATUALIZADOS */}
             {!isReadOnly && (
                 <div className="botoes-acao">
-                    <button onClick={compartilharTreino} className="botao-primario">
-                        Compartilhar Treino (Link)
+                    <button onClick={compartilharTreino} className="botao-primario" disabled={estaCompartilhando}>
+                        {estaCompartilhando ? "Gerando Link..." : "Compartilhar Treino (Link)"}
                     </button>
                     <button onClick={exportarParaHTML} className="botao-exportar" disabled={estaBaixando}>
                         {estaBaixando ? "Preparando..." : "Baixar como HTML"}
                     </button>
-                    <button onClick={onClose} className="botao-fechar" disabled={estaBaixando}>
+                    <button onClick={onClose} className="botao-fechar" disabled={estaBaixando || estaCompartilhando}>
                         Fechar
                     </button>
                 </div>
